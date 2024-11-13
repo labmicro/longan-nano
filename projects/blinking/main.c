@@ -36,103 +36,42 @@ SPDX-License-Identifier: MIT
 
 /* === Macros definitions ====================================================================== */
 
-#define LEDn           4U
-
-#define LED1_PIN       GPIO_PIN_13
-#define LED1_GPIO_PORT GPIOC
-#define LED1_GPIO_CLK  RCU_GPIOC
-
-#define LED2_PIN       GPIO_PIN_1
-#define LED2_GPIO_PORT GPIOA
-#define LED2_GPIO_CLK  RCU_GPIOA
-
-#define LED3_PIN       GPIO_PIN_2
-#define LED3_GPIO_PORT GPIOA
-#define LED3_GPIO_CLK  RCU_GPIOA
-
-#define LED4_PIN       GPIO_PIN_1
-#define LED4_GPIO_PORT GPIOE
-#define LED4_GPIO_CLK  RCU_GPIOE
-
 /* === Private data type declarations ========================================================== */
 
-typedef enum {
-    LED1 = 0,
-    LED2 = 1,
-    LED3 = 2,
-    LED4 = 3,
-} led_typedef_enum;
+typedef struct {
+    uint32_t port;
+    uint32_t pin;
+} led_t;
+
+typedef struct {
+    led_t red;
+    led_t green;
+    led_t blue;
+} led_rgb_t;
 
 /* === Private variable declarations =========================================================== */
 
+static const led_rgb_t LED_RGB = {
+    .green =
+        {
+            .port = GPIOA,
+            .pin = GPIO_PIN_1,
+        },
+    .blue =
+        {
+            .port = GPIOA,
+            .pin = GPIO_PIN_2,
+        },
+    .red =
+        {
+            .port = GPIOC,
+            .pin = GPIO_PIN_13,
+        },
+};
+
 /* === Private function declarations =========================================================== */
 
-/*!
-    \brief      delay a time in milliseconds
-    \param[in]  count: count in milliseconds
-    \param[out] none
-    \retval     none
-*/
-void delay_1ms(uint32_t count);
-
-/*!
-    \brief      configure led GPIO
-    \param[in]  lednum: specify the led to be configured
-      \arg        LED1
-      \arg        LED2
-      \arg        LED3
-      \arg        LED4
-    \param[out] none
-    \retval     none
-*/
-void gd_eval_led_init(led_typedef_enum lednum);
-
-/*!
-    \brief      turn on selected led
-    \param[in]  lednum: specify the led to be turned on
-      \arg        LED1
-      \arg        LED2
-      \arg        LED3
-      \arg        LED4
-    \param[out] none
-    \retval     none
-*/
-void gd_eval_led_off(led_typedef_enum lednum);
-
-/*!
-    \brief      turn off selected led
-    \param[in]  lednum: specify the led to be turned off
-      \arg        LED1
-      \arg        LED2
-      \arg        LED3
-      \arg        LED4
-    \param[out] none
-    \retval     none
-*/
-void gd_eval_led_on(led_typedef_enum lednum);
-
 /* === Public variable definitions ============================================================= */
-
-static uint32_t GPIO_PORT[LEDn] = {
-    LED1_GPIO_PORT,
-    LED2_GPIO_PORT,
-    LED3_GPIO_PORT,
-    LED4_GPIO_PORT,
-};
-
-static uint32_t GPIO_PIN[LEDn] = {
-    LED1_PIN,
-    LED2_PIN,
-    LED3_PIN,
-    LED4_PIN,
-};
-
-static rcu_periph_enum GPIO_CLK[LEDn] = {
-    LED1_GPIO_CLK,
-    LED2_GPIO_CLK,
-    LED3_GPIO_CLK,
-    LED4_GPIO_CLK,
-};
 
 /* === Private variable definitions ============================================================ */
 
@@ -154,45 +93,42 @@ void delay_1ms(uint32_t count) {
     } while (delta_mtime < delay_ticks);
 }
 
-void gd_eval_led_init(led_typedef_enum lednum) {
-    /* enable the led clock */
-    rcu_periph_clock_enable(GPIO_CLK[lednum]);
-    /* configure led GPIO port */
-    gpio_init(GPIO_PORT[lednum], GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN[lednum]);
-
-    GPIO_BOP(GPIO_PORT[lednum]) = GPIO_PIN[lednum];
-}
-
-void gd_eval_led_off(led_typedef_enum lednum) {
-    GPIO_BOP(GPIO_PORT[lednum]) = GPIO_PIN[lednum];
-}
-
-void gd_eval_led_on(led_typedef_enum lednum) {
-    GPIO_BC(GPIO_PORT[lednum]) = GPIO_PIN[lednum];
-}
 /* === Public function implementation ========================================================== */
 
 int main(void) {
 
     BoardSetup();
 
-    gd_eval_led_init(LED1);
-    gd_eval_led_init(LED2);
-    gd_eval_led_init(LED3);
+    rcu_periph_clock_enable(RCU_GPIOA);
+    rcu_periph_clock_enable(RCU_GPIOC);
+
+    gpio_init(LED_RGB.red.port, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, LED_RGB.red.pin);
+    gpio_bit_set(LED_RGB.red.port, LED_RGB.red.pin);
+
+    gpio_init(LED_RGB.green.port, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, LED_RGB.green.pin);
+    gpio_bit_set(LED_RGB.green.port, LED_RGB.green.pin);
+
+    gpio_init(LED_RGB.blue.port, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, LED_RGB.blue.pin);
+    gpio_bit_set(LED_RGB.blue.port, LED_RGB.blue.pin);
 
     while (1) {
-        /* turn on led1, turn off led4 */
-        gd_eval_led_on(LED1);
-        gd_eval_led_off(LED3);
-        delay_1ms(200);
-        /* turn on led2, turn off led1 */
-        gd_eval_led_on(LED2);
-        gd_eval_led_off(LED1);
-        delay_1ms(200);
-        /* turn on led3, turn off led2 */
-        gd_eval_led_on(LED3);
-        gd_eval_led_off(LED2);
-        delay_1ms(200);
+        gpio_bit_reset(LED_RGB.red.port, LED_RGB.red.pin);
+        delay_1ms(1000);
+
+        gpio_bit_set(LED_RGB.red.port, LED_RGB.red.pin);
+        delay_1ms(1000);
+
+        gpio_bit_reset(LED_RGB.green.port, LED_RGB.green.pin);
+        delay_1ms(1000);
+
+        gpio_bit_set(LED_RGB.green.port, LED_RGB.green.pin);
+        delay_1ms(1000);
+
+        gpio_bit_reset(LED_RGB.blue.port, LED_RGB.blue.pin);
+        delay_1ms(1000);
+
+        gpio_bit_set(LED_RGB.blue.port, LED_RGB.blue.pin);
+        delay_1ms(1000);
     }
     return 0;
 }
