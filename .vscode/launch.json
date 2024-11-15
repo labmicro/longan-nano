@@ -1,0 +1,15 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "cppdbg",
+            "request": "launch",
+            "name": "Debug (RISC V)",
+            "program": "./build/bin/project.elf",
+            "cwd": "${workspaceFolder}",
+            "useExtendedRemote": true,
+            "miDebuggerServerAddress": "localhost:3333",
+        },
+    ],
+    "compounds": []
+}
