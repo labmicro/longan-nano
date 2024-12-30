@@ -2,6 +2,26 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "cwd": "${workspaceRoot}",
+            "executable": "./build/bin/project.elf",
+            "name": "Debug with OpenOCD",
+            "request": "launch",
+            "type": "cortex-debug",
+            "servertype": "openocd",
+            "configFiles": [
+                "interface/cmsis-dap.cfg",
+                "target/stm32f1x.cfg"
+            ],
+            "searchDir": [],
+            "runToEntryPoint": "main",
+            "showDevDebugOutput": "none",
+            "openOCDLaunchCommands": [
+                "init",
+                "stm32f1x unlock 0",
+                "reset halt",
+            ]
+        },
+        {
             "type": "cppdbg",
             "request": "launch",
             "name": "Debug (RISC V)",
