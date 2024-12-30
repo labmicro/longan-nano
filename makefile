@@ -23,8 +23,11 @@
 # SPDX-License-Identifier: MIT
 ##################################################################################################
 
+# PROJECT = projects/pwm
 PROJECT = projects/blinking
-BOARD = longan-nano
+# BOARD = longan-nano
+BOARD = blue-pill
+MCU = gd32f103c8
 MUJU = muju
 
 include $(MUJU)/module/base/makefile

@@ -71,11 +71,33 @@ static const led_rgb_t LED_RGB = {
 
 /* === Private function declarations =========================================================== */
 
+#if defined(CORTEX_M)
+void SysTick_Handler(void);
+
+volatile uint64_t get_timer_value(void);
+#endif
+
+void delay_1ms(uint32_t count);
+
 /* === Public variable definitions ============================================================= */
 
 /* === Private variable definitions ============================================================ */
 
+#if defined(CORTEX_M)
+static uint64_t timer_value;
+#endif
+
 /* === Private function implementation ========================================================= */
+
+#if defined(CORTEX_M)
+void SysTick_Handler(void) {
+    timer_value++;
+}
+
+volatile uint64_t get_timer_value(void) {
+    return timer_value * SystemCoreClock / 1000U / 4;
+}
+#endif
 
 void delay_1ms(uint32_t count) {
     volatile uint64_t start_mtime, delta_mtime;
@@ -98,6 +120,10 @@ void delay_1ms(uint32_t count) {
 int main(void) {
 
     BoardSetup();
+
+#if defined(CORTEX_M)
+    SysTick_Config(SystemCoreClock / 1000U);
+#endif
 
     rcu_periph_clock_enable(RCU_GPIOA);
     rcu_periph_clock_enable(RCU_GPIOC);
