@@ -32,9 +32,7 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSI
 OF SUCH DAMAGE.
 */
 
-#include "gd32vf103.h"
-#include <stdio.h>
-#include "gd32vf103v_eval.h"
+#include "board.h"
 
 void gpio_config(void);
 void timer_config(void);
@@ -50,9 +48,9 @@ void gpio_config(void) {
     rcu_periph_clock_enable(RCU_AF);
 
     /*Configure PA1 PA2 PA3(TIMER1 CH1 CH2 CH3) as alternate function*/
+    gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_0);
     gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_1);
     gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_2);
-    gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_3);
 }
 
 /**
@@ -73,19 +71,19 @@ void timer_config(void) {
     timer_oc_parameter_struct timer_ocinitpara;
     timer_parameter_struct timer_initpara;
 
-    rcu_periph_clock_enable(RCU_TIMER1);
+    rcu_periph_clock_enable(RCU_TIMER4);
 
-    timer_deinit(TIMER1);
+    timer_deinit(TIMER4);
     /* initialize TIMER init parameter struct */
     timer_struct_para_init(&timer_initpara);
     /* TIMER1 configuration */
-    timer_initpara.prescaler = 107;
+    timer_initpara.prescaler = 1;
     timer_initpara.alignedmode = TIMER_COUNTER_EDGE;
     timer_initpara.counterdirection = TIMER_COUNTER_UP;
     timer_initpara.period = 15999;
     timer_initpara.clockdivision = TIMER_CKDIV_DIV1;
     timer_initpara.repetitioncounter = 0;
-    timer_init(TIMER1, &timer_initpara);
+    timer_init(TIMER4, &timer_initpara);
 
     /* initialize TIMER channel output parameter struct */
     timer_channel_output_struct_para_init(&timer_ocinitpara);
@@ -97,29 +95,29 @@ void timer_config(void) {
     timer_ocinitpara.ocidlestate = TIMER_OC_IDLE_STATE_LOW;
     timer_ocinitpara.ocnidlestate = TIMER_OCN_IDLE_STATE_LOW;
 
-    timer_channel_output_config(TIMER1, TIMER_CH_1, &timer_ocinitpara);
-    timer_channel_output_config(TIMER1, TIMER_CH_2, &timer_ocinitpara);
-    timer_channel_output_config(TIMER1, TIMER_CH_3, &timer_ocinitpara);
+    timer_channel_output_config(TIMER4, TIMER_CH_0, &timer_ocinitpara);
+    timer_channel_output_config(TIMER4, TIMER_CH_1, &timer_ocinitpara);
+    timer_channel_output_config(TIMER4, TIMER_CH_2, &timer_ocinitpara);
 
     /* CH1 configuration in PWM mode1,duty cycle 25% */
-    timer_channel_output_pulse_value_config(TIMER1, TIMER_CH_1, 3999);
-    timer_channel_output_mode_config(TIMER1, TIMER_CH_1, TIMER_OC_MODE_PWM0);
-    timer_channel_output_shadow_config(TIMER1, TIMER_CH_1, TIMER_OC_SHADOW_DISABLE);
+    timer_channel_output_pulse_value_config(TIMER4, TIMER_CH_0, 3999);
+    timer_channel_output_mode_config(TIMER4, TIMER_CH_0, TIMER_OC_MODE_PWM0);
+    timer_channel_output_shadow_config(TIMER4, TIMER_CH_0, TIMER_OC_SHADOW_DISABLE);
 
     /* CH2 configuration in PWM mode1,duty cycle 50% */
-    timer_channel_output_pulse_value_config(TIMER1, TIMER_CH_2, 7999);
-    timer_channel_output_mode_config(TIMER1, TIMER_CH_2, TIMER_OC_MODE_PWM0);
-    timer_channel_output_shadow_config(TIMER1, TIMER_CH_2, TIMER_OC_SHADOW_DISABLE);
+    timer_channel_output_pulse_value_config(TIMER4, TIMER_CH_1, 7999);
+    timer_channel_output_mode_config(TIMER4, TIMER_CH_1, TIMER_OC_MODE_PWM0);
+    timer_channel_output_shadow_config(TIMER4, TIMER_CH_1, TIMER_OC_SHADOW_DISABLE);
 
     /* CH3 configuration in PWM mode1,duty cycle 75% */
-    timer_channel_output_pulse_value_config(TIMER1, TIMER_CH_3, 11999);
-    timer_channel_output_mode_config(TIMER1, TIMER_CH_3, TIMER_OC_MODE_PWM0);
-    timer_channel_output_shadow_config(TIMER1, TIMER_CH_3, TIMER_OC_SHADOW_DISABLE);
+    timer_channel_output_pulse_value_config(TIMER4, TIMER_CH_2, 11999);
+    timer_channel_output_mode_config(TIMER4, TIMER_CH_2, TIMER_OC_MODE_PWM0);
+    timer_channel_output_shadow_config(TIMER4, TIMER_CH_2, TIMER_OC_SHADOW_DISABLE);
 
     /* auto-reload preload enable */
-    timer_auto_reload_shadow_enable(TIMER1);
+    timer_auto_reload_shadow_enable(TIMER4);
     /* auto-reload preload enable */
-    timer_enable(TIMER1);
+    timer_enable(TIMER4);
 }
 
 /*!
