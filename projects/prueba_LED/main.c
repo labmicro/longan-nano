@@ -95,43 +95,22 @@ void delay_1ms(uint32_t count) {
 /* === Public function implementation ========================================================== */
 
 int main(void) {
-
-    BoardSetup();
-
-    rcu_periph_clock_enable(RCU_GPIOA);
+    /* Habilitar el reloj para el puerto GPIOB */
     rcu_periph_clock_enable(RCU_GPIOC);
 
-    gpio_init(LED_RGB.red.port, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, LED_RGB.red.pin);
-    gpio_bit_set(LED_RGB.red.port, LED_RGB.red.pin);
+    /* Configurar el pin PA3 como salida push-pull */
+    gpio_init(GPIOC, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_13);
 
-    gpio_init(LED_RGB.green.port, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, LED_RGB.green.pin);
-    gpio_bit_set(LED_RGB.green.port, LED_RGB.green.pin);
-
-    gpio_init(LED_RGB.blue.port, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, LED_RGB.blue.pin);
-    gpio_bit_set(LED_RGB.blue.port, LED_RGB.blue.pin);
+    /* Asegurarse de que el LED esté apagado inicialmente */
+    gpio_bit_reset(GPIOC, GPIO_PIN_13);
 
     while (1) {
-        gpio_bit_reset(LED_RGB.red.port, LED_RGB.red.pin);
-        delay_1ms(1000);
+        /* Encender el LED (poner PA3 en alto) */
+        gpio_bit_set(GPIOC, GPIO_PIN_13);
+        delay_1ms(50); // Esperar 1 segundo
 
-        gpio_bit_set(LED_RGB.red.port, LED_RGB.red.pin);
-        delay_1ms(1000);
-
-        gpio_bit_reset(LED_RGB.green.port, LED_RGB.green.pin);
-        delay_1ms(1000);
-
-        gpio_bit_set(LED_RGB.green.port, LED_RGB.green.pin);
-        delay_1ms(1000);
-
-        gpio_bit_reset(LED_RGB.blue.port, LED_RGB.blue.pin);
-        delay_1ms(1000);
-
-        gpio_bit_set(LED_RGB.blue.port, LED_RGB.blue.pin);
-        delay_1ms(1000);
+        /* Apagar el LED (poner PA3 en bajo) */
+        gpio_bit_reset(GPIOC, GPIO_PIN_13);
+        delay_1ms(50); // Esperar 1 segundo
     }
-    return 0;
 }
-
-/* === End of documentation ==================================================================== */
-
-/** @} End of module definition for doxygen */

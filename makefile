@@ -23,7 +23,7 @@
 # SPDX-License-Identifier: MIT
 ##################################################################################################
 
-PROJECT = projects/blinking
+PROJECT = projects/prueba_ADC
 BOARD = longan-nano
 MUJU = muju
 

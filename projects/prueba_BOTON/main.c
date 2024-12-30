@@ -95,43 +95,27 @@ void delay_1ms(uint32_t count) {
 /* === Public function implementation ========================================================== */
 
 int main(void) {
-
-    BoardSetup();
-
+    /* Habilitar el reloj para el puerto GPIOA */
     rcu_periph_clock_enable(RCU_GPIOA);
     rcu_periph_clock_enable(RCU_GPIOC);
 
-    gpio_init(LED_RGB.red.port, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, LED_RGB.red.pin);
-    gpio_bit_set(LED_RGB.red.port, LED_RGB.red.pin);
+    /* Configurar PA4 como salida push-pull */
+    gpio_init(GPIOA, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_4);
 
-    gpio_init(LED_RGB.green.port, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, LED_RGB.green.pin);
-    gpio_bit_set(LED_RGB.green.port, LED_RGB.green.pin);
+    /* Configurar PA7 como entrada flotante */
+    gpio_init(GPIOC, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_15);
 
-    gpio_init(LED_RGB.blue.port, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, LED_RGB.blue.pin);
-    gpio_bit_set(LED_RGB.blue.port, LED_RGB.blue.pin);
+    /* Asegurarse de que el LED esté apagado inicialmente */
+    gpio_bit_reset(GPIOA, GPIO_PIN_4);
 
     while (1) {
-        gpio_bit_reset(LED_RGB.red.port, LED_RGB.red.pin);
-        delay_1ms(1000);
-
-        gpio_bit_set(LED_RGB.red.port, LED_RGB.red.pin);
-        delay_1ms(1000);
-
-        gpio_bit_reset(LED_RGB.green.port, LED_RGB.green.pin);
-        delay_1ms(1000);
-
-        gpio_bit_set(LED_RGB.green.port, LED_RGB.green.pin);
-        delay_1ms(1000);
-
-        gpio_bit_reset(LED_RGB.blue.port, LED_RGB.blue.pin);
-        delay_1ms(1000);
-
-        gpio_bit_set(LED_RGB.blue.port, LED_RGB.blue.pin);
-        delay_1ms(1000);
+        /* Leer el estado del pulsador en PA7 */
+        if (gpio_input_bit_get(GPIOC, GPIO_PIN_15)) {
+            /* Encender el LED (PA4 en alto) si el pulsador está presionado */
+            gpio_bit_set(GPIOA, GPIO_PIN_4);
+        } else {
+            /* Apagar el LED (PA4 en bajo) si el pulsador no está presionado */
+            gpio_bit_reset(GPIOA, GPIO_PIN_4);
+        }
     }
-    return 0;
 }
-
-/* === End of documentation ==================================================================== */
-
-/** @} End of module definition for doxygen */
