@@ -26,13 +26,14 @@ SPDX-License-Identifier: MIT
 /** \brief Hello World sample application
  **
  ** \addtogroup samples Samples
- ** \brief Samples applications with MUJU Framwork
+ ** \brief Samples applications with MUJU Framework
  ** @{ */
 
 /* === Headers files inclusions =============================================================== */
 
 #include "board.h"
 #include <stdio.h>
+#include <stdbool.h>
 
 /* === Macros definitions ====================================================================== */
 
@@ -45,6 +46,12 @@ SPDX-License-Identifier: MIT
 
 /* === Private function declarations =========================================================== */
 
+#if defined(CORTEX_M)
+void SysTick_Handler(void);
+
+volatile uint64_t get_timer_value(void);
+#endif
+
 void delay_1ms(uint32_t count);
 
 void gpio_config(void);
@@ -55,7 +62,21 @@ void timer_config(void);
 
 /* === Private variable definitions ============================================================ */
 
+#if defined(CORTEX_M)
+static uint64_t timer_value;
+#endif
+
 /* === Private function implementation ========================================================= */
+
+#if defined(CORTEX_M)
+void SysTick_Handler(void) {
+    timer_value++;
+}
+
+volatile uint64_t get_timer_value(void) {
+    return timer_value * SystemCoreClock / 1000U / 4;
+}
+#endif
 
 void delay_1ms(uint32_t count) {
     volatile uint64_t start_mtime, delta_mtime;
@@ -74,56 +95,46 @@ void delay_1ms(uint32_t count) {
 }
 
 /**
-    \brief      configure the GPIO ports
+    \brief      Configure the GPIO port PB8 for TIMER3 CH2
     \param[in]  none
     \param[out] none
     \retval     none
   */
 void gpio_config(void) {
-    rcu_periph_clock_enable(RCU_GPIOA);
+    rcu_periph_clock_enable(RCU_GPIOB);
     rcu_periph_clock_enable(RCU_AF);
 
-    /*Configure PA1 PA2 PA3(TIMER1 CH1 CH2 CH3) as alternate function*/
-    gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_0);
-    gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_1);
-    gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_2);
+    /* Configure PB8 (TIMER3 CH2) as alternate function */
+    gpio_init(GPIOB, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_8);
 }
 
 /**
-    \brief      configure the TIMER peripheral
+    \brief      Configure the TIMER3 peripheral
     \param[in]  none
     \param[out] none
     \retval     none
   */
 void timer_config(void) {
-    /* -----------------------------------------------------------------------
-    TIMER1 configuration: generate 3 PWM signals with 3 different duty cycles:
-    TIMER1CLK = SystemCoreClock / 108 = 1MHz
-
-    TIMER1 channel1 duty cycle = (4000/ 16000)* 100  = 25%
-    TIMER1 channel2 duty cycle = (8000/ 16000)* 100  = 50%
-    TIMER1 channel3 duty cycle = (12000/ 16000)* 100 = 75%
-    ----------------------------------------------------------------------- */
     timer_oc_parameter_struct timer_ocinitpara;
     timer_parameter_struct timer_initpara;
 
-    rcu_periph_clock_enable(RCU_TIMER4);
+    rcu_periph_clock_enable(RCU_TIMER3);
 
-    timer_deinit(TIMER4);
-    /* initialize TIMER init parameter struct */
+    timer_deinit(TIMER3);
+    /* Initialize TIMER init parameter struct */
     timer_struct_para_init(&timer_initpara);
-    /* TIMER1 configuration */
-    timer_initpara.prescaler = 107;
+    /* TIMER3 configuration */
+    timer_initpara.prescaler = 10;
     timer_initpara.alignedmode = TIMER_COUNTER_EDGE;
     timer_initpara.counterdirection = TIMER_COUNTER_UP;
     timer_initpara.period = PERIODO;
     timer_initpara.clockdivision = TIMER_CKDIV_DIV1;
     timer_initpara.repetitioncounter = 0;
-    timer_init(TIMER4, &timer_initpara);
+    timer_init(TIMER3, &timer_initpara);
 
-    /* initialize TIMER channel output parameter struct */
+    /* Initialize TIMER channel output parameter struct */
     timer_channel_output_struct_para_init(&timer_ocinitpara);
-    /* CH0, CH1 and CH2 configuration in PWM mode */
+    /* Configure CH2 in PWM mode */
     timer_ocinitpara.outputstate = TIMER_CCX_ENABLE;
     timer_ocinitpara.outputnstate = TIMER_CCXN_DISABLE;
     timer_ocinitpara.ocpolarity = TIMER_OC_POLARITY_HIGH;
@@ -131,29 +142,17 @@ void timer_config(void) {
     timer_ocinitpara.ocidlestate = TIMER_OC_IDLE_STATE_LOW;
     timer_ocinitpara.ocnidlestate = TIMER_OCN_IDLE_STATE_LOW;
 
-    timer_channel_output_config(TIMER4, TIMER_CH_0, &timer_ocinitpara);
-    timer_channel_output_config(TIMER4, TIMER_CH_1, &timer_ocinitpara);
-    timer_channel_output_config(TIMER4, TIMER_CH_2, &timer_ocinitpara);
+    timer_channel_output_config(TIMER3, TIMER_CH_2, &timer_ocinitpara);
 
-    /* CH1 configuration in PWM mode1,duty cycle 25% */
-    timer_channel_output_pulse_value_config(TIMER4, TIMER_CH_0, 0);
-    timer_channel_output_mode_config(TIMER4, TIMER_CH_0, TIMER_OC_MODE_PWM1);
-    timer_channel_output_shadow_config(TIMER4, TIMER_CH_0, TIMER_OC_SHADOW_DISABLE);
+    /* CH2 configuration in PWM mode1, initial duty cycle 0% */
+    timer_channel_output_pulse_value_config(TIMER3, TIMER_CH_2, 0);
+    timer_channel_output_mode_config(TIMER3, TIMER_CH_2, TIMER_OC_MODE_PWM1);
+    timer_channel_output_shadow_config(TIMER3, TIMER_CH_2, TIMER_OC_SHADOW_DISABLE);
 
-    // /* CH2 configuration in PWM mode1,duty cycle 50% */
-    timer_channel_output_pulse_value_config(TIMER4, TIMER_CH_1, 0);
-    timer_channel_output_mode_config(TIMER4, TIMER_CH_1, TIMER_OC_MODE_PWM1);
-    timer_channel_output_shadow_config(TIMER4, TIMER_CH_1, TIMER_OC_SHADOW_DISABLE);
-
-    // /* CH3 configuration in PWM mode1,duty cycle 75% */
-    timer_channel_output_pulse_value_config(TIMER4, TIMER_CH_2, PERIODO);
-    timer_channel_output_mode_config(TIMER4, TIMER_CH_2, TIMER_OC_MODE_PWM0);
-    timer_channel_output_shadow_config(TIMER4, TIMER_CH_2, TIMER_OC_SHADOW_DISABLE);
-
-    /* auto-reload preload enable */
-    timer_auto_reload_shadow_enable(TIMER4);
-    /* auto-reload preload enable */
-    timer_enable(TIMER4);
+    /* Auto-reload preload enable */
+    timer_auto_reload_shadow_enable(TIMER3);
+    /* Enable TIMER3 */
+    timer_enable(TIMER3);
 }
 
 /* === Public function implementation ========================================================== */
@@ -164,6 +163,10 @@ int main(void) {
     bool flip;
 
     BoardSetup();
+
+    #if defined(CORTEX_M)
+    SysTick_Config(SystemCoreClock / 1000U);
+    #endif
 
     gpio_config();
     timer_config();
@@ -182,9 +185,7 @@ int main(void) {
             flip = true;
         }
 
-        timer_channel_output_pulse_value_config(TIMER4, TIMER_CH_0, value);
-        timer_channel_output_pulse_value_config(TIMER4, TIMER_CH_1, PERIODO - value);
-        timer_channel_output_pulse_value_config(TIMER4, TIMER_CH_2, PERIODO - 2 * value);
+        timer_channel_output_pulse_value_config(TIMER3, TIMER_CH_2, value);
 
         if (flip) {
             delay_1ms(1000);

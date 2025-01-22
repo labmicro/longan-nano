@@ -1,10 +1,29 @@
 /************************************************************************************************
-Copyright ...
+Copyright (c) 2022-2023, Laboratorio de Microprocesadores
+Facultad de Ciencias Exactas y Tecnología, Universidad Nacional de Tucumán
+https://www.microprocesadores.unt.edu.ar/
+
+Copyright (c) 2022-2023, Esteban Volentini <evolentini@herrera.unt.edu.ar>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+associated documentation files (the "Software"), to deal in the Software without restriction,
+including without limitation the rights to use, copy, modify, merge, publish, distribute,
+sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial
+portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
+NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES
+OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 SPDX-License-Identifier: MIT
 *************************************************************************************************/
 
-/** \brief PWM control with ADC input
+/** \brief Hello World sample application
  **
  ** \addtogroup samples Samples
  ** \brief Samples applications with MUJU Framework
@@ -14,6 +33,7 @@ SPDX-License-Identifier: MIT
 
 #include "board.h"
 #include <stdio.h>
+#include <stdbool.h>
 
 /* === Macros definitions ====================================================================== */
 
@@ -26,21 +46,37 @@ SPDX-License-Identifier: MIT
 
 /* === Private function declarations =========================================================== */
 
+#if defined(CORTEX_M)
+void SysTick_Handler(void);
+
+volatile uint64_t get_timer_value(void);
+#endif
+
 void delay_1ms(uint32_t count);
 
 void gpio_config(void);
 
 void timer_config(void);
 
-void adc_config(void);
-
-uint16_t adc_read(void);
-
 /* === Public variable definitions ============================================================= */
 
 /* === Private variable definitions ============================================================ */
 
+#if defined(CORTEX_M)
+static uint64_t timer_value;
+#endif
+
 /* === Private function implementation ========================================================= */
+
+#if defined(CORTEX_M)
+void SysTick_Handler(void) {
+    timer_value++;
+}
+
+volatile uint64_t get_timer_value(void) {
+    return timer_value * SystemCoreClock / 1000U / 4;
+}
+#endif
 
 void delay_1ms(uint32_t count) {
     volatile uint64_t start_mtime, delta_mtime;
@@ -59,7 +95,7 @@ void delay_1ms(uint32_t count) {
 }
 
 /**
-    \brief      Configure the GPIO ports PB8 and PB0
+    \brief      Configure the GPIO port PB8 for TIMER3 CH2
     \param[in]  none
     \param[out] none
     \retval     none
@@ -70,13 +106,10 @@ void gpio_config(void) {
 
     /* Configure PB8 (TIMER3 CH2) as alternate function */
     gpio_init(GPIOB, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_8);
-
-    /* Configure PB0 (ADC01_IN8) as analog input */
-    gpio_init(GPIOB, GPIO_MODE_AIN, GPIO_OSPEED_50MHZ, GPIO_PIN_1);
 }
 
 /**
-    \brief      Configure the TIMER3 peripheral for PWM
+    \brief      Configure the TIMER3 peripheral
     \param[in]  none
     \param[out] none
     \retval     none
@@ -88,8 +121,10 @@ void timer_config(void) {
     rcu_periph_clock_enable(RCU_TIMER3);
 
     timer_deinit(TIMER3);
+    /* Initialize TIMER init parameter struct */
     timer_struct_para_init(&timer_initpara);
-    timer_initpara.prescaler = 107;
+    /* TIMER3 configuration */
+    timer_initpara.prescaler = 10;
     timer_initpara.alignedmode = TIMER_COUNTER_EDGE;
     timer_initpara.counterdirection = TIMER_COUNTER_UP;
     timer_initpara.period = PERIODO;
@@ -97,82 +132,66 @@ void timer_config(void) {
     timer_initpara.repetitioncounter = 0;
     timer_init(TIMER3, &timer_initpara);
 
+    /* Initialize TIMER channel output parameter struct */
     timer_channel_output_struct_para_init(&timer_ocinitpara);
+    /* Configure CH2 in PWM mode */
     timer_ocinitpara.outputstate = TIMER_CCX_ENABLE;
     timer_ocinitpara.outputnstate = TIMER_CCXN_DISABLE;
     timer_ocinitpara.ocpolarity = TIMER_OC_POLARITY_HIGH;
+    timer_ocinitpara.ocnpolarity = TIMER_OCN_POLARITY_HIGH;
     timer_ocinitpara.ocidlestate = TIMER_OC_IDLE_STATE_LOW;
+    timer_ocinitpara.ocnidlestate = TIMER_OCN_IDLE_STATE_LOW;
+
     timer_channel_output_config(TIMER3, TIMER_CH_2, &timer_ocinitpara);
 
+    /* CH2 configuration in PWM mode1, initial duty cycle 0% */
     timer_channel_output_pulse_value_config(TIMER3, TIMER_CH_2, 0);
     timer_channel_output_mode_config(TIMER3, TIMER_CH_2, TIMER_OC_MODE_PWM1);
     timer_channel_output_shadow_config(TIMER3, TIMER_CH_2, TIMER_OC_SHADOW_DISABLE);
 
+    /* Auto-reload preload enable */
     timer_auto_reload_shadow_enable(TIMER3);
+    /* Enable TIMER3 */
     timer_enable(TIMER3);
-}
-
-/**
-    \brief      Configure the ADC to read from PB0 (ADC01_IN8)
-    \param[in]  none
-    \param[out] none
-    \retval     none
-  */
-void adc_config(void) {
-    rcu_periph_clock_enable(RCU_ADC1);
-
-    adc_deinit(ADC1);
-    adc_mode_config(ADC_MODE_FREE);
-    adc_special_function_config(ADC1, ADC_CONTINUOUS_MODE, DISABLE);
-    adc_special_function_config(ADC1, ADC_SCAN_MODE, DISABLE);
-
-    adc_data_alignment_config(ADC1, ADC_DATAALIGN_RIGHT);
-    adc_channel_length_config(ADC1, ADC_REGULAR_CHANNEL, 1);
-
-    adc_regular_channel_config(ADC1, 0, ADC_CHANNEL_9, ADC_SAMPLETIME_55POINT5);
-    adc_external_trigger_source_config(ADC1, ADC_REGULAR_CHANNEL, ADC0_1_EXTTRIG_REGULAR_NONE);
-    adc_external_trigger_config(ADC1, ADC_REGULAR_CHANNEL, ENABLE);
-
-    adc_enable(ADC1);
-    delay_1ms(1); // Small delay for ADC stabilization
-    adc_calibration_enable(ADC1);
-}
-
-/**
-    \brief      Read ADC value from PB0
-    \param[in]  none
-    \param[out] none
-    \retval     12-bit ADC value (0-4095)
-  */
-uint16_t adc_read(void) {
-    adc_software_trigger_enable(ADC1, ADC_REGULAR_CHANNEL);
-    while (!adc_flag_get(ADC1, ADC_FLAG_EOC));
-    return adc_regular_data_read(ADC1);
 }
 
 /* === Public function implementation ========================================================== */
 
 int main(void) {
-    uint16_t adc_value;
-    uint32_t pwm_value;
+    int value = 1;
+    int change = DELTA;
+    bool flip;
 
     BoardSetup();
 
+    #if defined(CORTEX_M)
+    SysTick_Config(SystemCoreClock / 1000U);
+    #endif
+
     gpio_config();
     timer_config();
-    adc_config();
 
     while (1) {
-        // Read ADC value
-        adc_value = adc_read();
+        value = value + change;
 
-        // Scale ADC value to PWM range (0 to PERIODO)
-        pwm_value = (adc_value * PERIODO) / 4095;
+        flip = false;
+        if (value > PERIODO) {
+            value = PERIODO;
+            change = -DELTA;
+            flip = true;
+        } else if (value < 0) {
+            value = 0;
+            change = DELTA;
+            flip = true;
+        }
 
-        // Update PWM duty cycle
-        timer_channel_output_pulse_value_config(TIMER3, TIMER_CH_2, pwm_value);
+        timer_channel_output_pulse_value_config(TIMER3, TIMER_CH_2, value);
 
-        delay_1ms(10); // Small delay for smooth operation
+        if (flip) {
+            delay_1ms(1000);
+        } else {
+            delay_1ms(100);
+        }
     }
 
     return 0;

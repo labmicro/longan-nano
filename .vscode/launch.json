@@ -9,26 +9,30 @@
             "type": "cortex-debug",
             "servertype": "openocd",
             "configFiles": [
-                "interface/cmsis-dap.cfg",
-                "target/stm32f1x.cfg"
+                "muju/external/base/mcu/stm32f103c8/openocd/openocd.cfg",
             ],
             "searchDir": [],
             "runToEntryPoint": "main",
             "showDevDebugOutput": "none",
-            "openOCDLaunchCommands": [
-                "init",
-                "stm32f1x unlock 0",
-                "reset halt",
-            ]
         },
         {
-            "type": "cppdbg",
-            "request": "launch",
             "name": "Debug (RISC V)",
+            "type": "cppdbg",
+            "MIMode": "gdb",
+            "request": "launch",
+            "cwd": "${workspaceRoot}",
             "program": "./build/bin/project.elf",
-            "cwd": "${workspaceFolder}",
-            "useExtendedRemote": true,
+            "miDebuggerPath": "gdb-multiarch",
             "miDebuggerServerAddress": "localhost:3333",
+            "useExtendedRemote": true,
+            "postRemoteConnectCommands": [
+                {
+                    "text": "monitor reset halt"
+                },
+                {
+                    "text": "load"
+                },
+            ]
         },
     ],
     "compounds": []

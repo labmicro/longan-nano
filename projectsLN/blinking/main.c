@@ -26,36 +26,77 @@ SPDX-License-Identifier: MIT
 /** \brief Hello World sample application
  **
  ** \addtogroup samples Samples
- ** \brief Samples applications with MUJU Framework
+ ** \brief Samples applications with MUJU Framwork
  ** @{ */
 
 /* === Headers files inclusions =============================================================== */
 
 #include "board.h"
-#include <stdio.h>
 
 /* === Macros definitions ====================================================================== */
 
-#define PERIODO 20000
-#define DELTA   (PERIODO / 20)
-
 /* === Private data type declarations ========================================================== */
+
+typedef struct {
+    uint32_t port;
+    uint32_t pin;
+} led_t;
+
+typedef struct {
+    led_t red;
+    led_t green;
+    led_t blue;
+} led_rgb_t;
 
 /* === Private variable declarations =========================================================== */
 
+static const led_rgb_t LED_RGB = {
+    .green =
+        {
+            .port = GPIOA,
+            .pin = GPIO_PIN_1,
+        },
+    .blue =
+        {
+            .port = GPIOA,
+            .pin = GPIO_PIN_2,
+        },
+    .red =
+        {
+            .port = GPIOC,
+            .pin = GPIO_PIN_13,
+        },
+};
+
 /* === Private function declarations =========================================================== */
 
+#if defined(CORTEX_M)
+void SysTick_Handler(void);
+
+volatile uint64_t get_timer_value(void);
+#endif
+
 void delay_1ms(uint32_t count);
-
-void gpio_config(void);
-
-void timer_config(void);
 
 /* === Public variable definitions ============================================================= */
 
 /* === Private variable definitions ============================================================ */
 
+#if defined(CORTEX_M)
+static uint64_t timer_value;
+#endif
+
 /* === Private function implementation ========================================================= */
+
+#if defined(CORTEX_M)
+void SysTick_Handler(void) {
+    timer_value++;
+}
+
+volatile uint64_t get_timer_value(void) {
+    return timer_value * SystemCoreClock / 1000U / 4;
+}
+#endif
 
 void delay_1ms(uint32_t count) {
     volatile uint64_t start_mtime, delta_mtime;
@@ -73,102 +114,47 @@ void delay_1ms(uint32_t count) {
     } while (delta_mtime < delay_ticks);
 }
 
-/**
-    \brief      Configure the GPIO port PB8 for TIMER3 CH2
-    \param[in]  none
-    \param[out] none
-    \retval     none
-  */
-void gpio_config(void) {
-    rcu_periph_clock_enable(RCU_GPIOB);
-    rcu_periph_clock_enable(RCU_AF);
-
-    /* Configure PB8 (TIMER3 CH2) as alternate function */
-    gpio_init(GPIOB, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_8);
-}
-
-/**
-    \brief      Configure the TIMER3 peripheral
-    \param[in]  none
-    \param[out] none
-    \retval     none
-  */
-void timer_config(void) {
-    timer_oc_parameter_struct timer_ocinitpara;
-    timer_parameter_struct timer_initpara;
-
-    rcu_periph_clock_enable(RCU_TIMER3);
-
-    timer_deinit(TIMER3);
-    /* Initialize TIMER init parameter struct */
-    timer_struct_para_init(&timer_initpara);
-    /* TIMER3 configuration */
-    timer_initpara.prescaler = 107;
-    timer_initpara.alignedmode = TIMER_COUNTER_EDGE;
-    timer_initpara.counterdirection = TIMER_COUNTER_UP;
-    timer_initpara.period = PERIODO;
-    timer_initpara.clockdivision = TIMER_CKDIV_DIV1;
-    timer_initpara.repetitioncounter = 0;
-    timer_init(TIMER3, &timer_initpara);
-
-    /* Initialize TIMER channel output parameter struct */
-    timer_channel_output_struct_para_init(&timer_ocinitpara);
-    /* Configure CH2 in PWM mode */
-    timer_ocinitpara.outputstate = TIMER_CCX_ENABLE;
-    timer_ocinitpara.outputnstate = TIMER_CCXN_DISABLE;
-    timer_ocinitpara.ocpolarity = TIMER_OC_POLARITY_HIGH;
-    timer_ocinitpara.ocnpolarity = TIMER_OCN_POLARITY_HIGH;
-    timer_ocinitpara.ocidlestate = TIMER_OC_IDLE_STATE_LOW;
-    timer_ocinitpara.ocnidlestate = TIMER_OCN_IDLE_STATE_LOW;
-
-    timer_channel_output_config(TIMER3, TIMER_CH_2, &timer_ocinitpara);
-
-    /* CH2 configuration in PWM mode1, initial duty cycle 0% */
-    timer_channel_output_pulse_value_config(TIMER3, TIMER_CH_2, 0);
-    timer_channel_output_mode_config(TIMER3, TIMER_CH_2, TIMER_OC_MODE_PWM1);
-    timer_channel_output_shadow_config(TIMER3, TIMER_CH_2, TIMER_OC_SHADOW_DISABLE);
-
-    /* Auto-reload preload enable */
-    timer_auto_reload_shadow_enable(TIMER3);
-    /* Enable TIMER3 */
-    timer_enable(TIMER3);
-}
-
 /* === Public function implementation ========================================================== */
 
 int main(void) {
-    int value = 1;
-    int change = DELTA;
-    bool flip;
 
     BoardSetup();
 
-    gpio_config();
-    timer_config();
+#if defined(CORTEX_M)
+    SysTick_Config(SystemCoreClock / 1000U);
+#endif
+
+    rcu_periph_clock_enable(RCU_GPIOA);
+    rcu_periph_clock_enable(RCU_GPIOC);
+
+    gpio_init(LED_RGB.red.port, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, LED_RGB.red.pin);
+    gpio_bit_set(LED_RGB.red.port, LED_RGB.red.pin);
+
+    gpio_init(LED_RGB.green.port, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, LED_RGB.green.pin);
+    gpio_bit_set(LED_RGB.green.port, LED_RGB.green.pin);
+
+    gpio_init(LED_RGB.blue.port, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, LED_RGB.blue.pin);
+    gpio_bit_set(LED_RGB.blue.port, LED_RGB.blue.pin);
 
     while (1) {
-        value = value + change;
+        gpio_bit_reset(LED_RGB.red.port, LED_RGB.red.pin);
+        delay_1ms(500);
 
-        flip = false;
-        if (value > PERIODO) {
-            value = PERIODO;
-            change = -DELTA;
-            flip = true;
-        } else if (value < 0) {
-            value = 0;
-            change = DELTA;
-            flip = true;
-        }
+        gpio_bit_set(LED_RGB.red.port, LED_RGB.red.pin);
+        delay_1ms(500);
 
-        timer_channel_output_pulse_value_config(TIMER3, TIMER_CH_2, value);
+/*        gpio_bit_reset(LED_RGB.green.port, LED_RGB.green.pin);
+        delay_1ms(1000);
 
-        if (flip) {
-            delay_1ms(1000);
-        } else {
-            delay_1ms(100);
-        }
+        gpio_bit_set(LED_RGB.green.port, LED_RGB.green.pin);
+        delay_1ms(1000);
+
+        gpio_bit_reset(LED_RGB.blue.port, LED_RGB.blue.pin);
+        delay_1ms(1000);
+
+        gpio_bit_set(LED_RGB.blue.port, LED_RGB.blue.pin);
+        delay_1ms(1000); */
     }
-
     return 0;
 }
 

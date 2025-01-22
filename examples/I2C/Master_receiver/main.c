@@ -35,7 +35,7 @@ OF SUCH DAMAGE.
 
 #include "gd32vf103.h"
 #include <stdio.h>
-#include "gd32vf103v_eval.h"
+#include "board.h"
 
 #define I2C_10BIT_ADDRESS    0
 

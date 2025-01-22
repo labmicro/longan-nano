@@ -138,12 +138,12 @@ int main(void) {
 
     while (1) {
         gpio_bit_reset(LED_RGB.red.port, LED_RGB.red.pin);
-        delay_1ms(1000);
+        delay_1ms(500);
 
         gpio_bit_set(LED_RGB.red.port, LED_RGB.red.pin);
-        delay_1ms(1000);
+        delay_1ms(500);
 
-        gpio_bit_reset(LED_RGB.green.port, LED_RGB.green.pin);
+/*        gpio_bit_reset(LED_RGB.green.port, LED_RGB.green.pin);
         delay_1ms(1000);
 
         gpio_bit_set(LED_RGB.green.port, LED_RGB.green.pin);
@@ -153,7 +153,7 @@ int main(void) {
         delay_1ms(1000);
 
         gpio_bit_set(LED_RGB.blue.port, LED_RGB.blue.pin);
-        delay_1ms(1000);
+        delay_1ms(1000); */
     }
     return 0;
 }
