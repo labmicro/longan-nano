@@ -98,56 +98,48 @@ void i2c_init(void) {
     rcu_periph_clock_enable(RCU_GPIOB);
 
     /* enable I2C clock */
-    rcu_periph_clock_enable(RCU_I2C1);
-
-    /* connect PB10 to I2C1_SCL in mode open-drain */
-    gpio_init(GPIOB, GPIO_MODE_AF_OD, GPIO_OSPEED_50MHZ, GPIO_PIN_10);
-    /* connect PB11 to I2C1_SDA in mode open-drain */
-    gpio_init(GPIOB, GPIO_MODE_AF_OD, GPIO_OSPEED_50MHZ, GPIO_PIN_11);
+    rcu_periph_clock_enable(RCU_I2C0);
 
     /* connect PB6 to I2C0_SCL in mode open-drain */
-    // gpio_init(GPIOB, GPIO_MODE_AF_OD, GPIO_OSPEED_50MHZ, GPIO_PIN_6);
+    gpio_init(GPIOB, GPIO_MODE_AF_OD, GPIO_OSPEED_50MHZ, GPIO_PIN_6);
     /* connect PB7 to I2C0_SDA in mode open-drain */
-    // gpio_init(GPIOB, GPIO_MODE_AF_OD, GPIO_OSPEED_50MHZ, GPIO_PIN_7);
+    gpio_init(GPIOB, GPIO_MODE_AF_OD, GPIO_OSPEED_50MHZ, GPIO_PIN_7);
 
-    i2c_deinit(I2C1);
-    i2c_clock_config(I2C1, 100000, I2C_DTCY_2);
-    i2c_enable(I2C1);
+    i2c_deinit(I2C0);
+    i2c_clock_config(I2C0, 100000, I2C_DTCY_2);
+    i2c_enable(I2C0);
 }
 
 static void probe_address(uint32_t i) {
     printf("0x%lx, ", i);
 
-    while (i2c_flag_get(I2C1, I2C_FLAG_I2CBSY))
-        ;
-    i2c_start_on_bus(I2C1);
-    while (!i2c_flag_get(I2C1, I2C_FLAG_SBSEND))
-        ;
+    while (i2c_flag_get(I2C0, I2C_FLAG_I2CBSY));
+    i2c_start_on_bus(I2C0);
+    while (!i2c_flag_get(I2C0, I2C_FLAG_SBSEND));
     // it's cleared by getting the flag, ie. reading I2C_STAT0
-    i2c_master_addressing(I2C1, i << 1, I2C_TRANSMITTER);
+    i2c_master_addressing(I2C0, i << 1, I2C_TRANSMITTER);
     uint32_t k = 0;
-    while (!i2c_flag_get(I2C1, I2C_FLAG_ADDSEND)) {
-        if (i2c_flag_get(I2C1, I2C_FLAG_AERR)) {
-            i2c_flag_clear(I2C1, I2C_FLAG_AERR);
-            i2c_stop_on_bus(I2C1);
+    while (!i2c_flag_get(I2C0, I2C_FLAG_ADDSEND)) {
+        if (i2c_flag_get(I2C0, I2C_FLAG_AERR)) {
+            i2c_flag_clear(I2C0, I2C_FLAG_AERR);
+            i2c_stop_on_bus(I2C0);
             return;
         }
         // in case no bus is connected
         if (k++ > 1000 * 1000) {
-            i2c_stop_on_bus(I2C1);
+            i2c_stop_on_bus(I2C0);
             return;
         }
     }
 
     printf("Found device on address: 0x%lx (%lu)\n", i, i);
     // NB: it's cleared by reading I2C_STAT0 _and_ I2C_STAT1
-    i2c_flag_clear(I2C1, I2C_FLAG_ADDSEND);
+    i2c_flag_clear(I2C0, I2C_FLAG_ADDSEND);
 
-    i2c_stop_on_bus(I2C1);
+    i2c_stop_on_bus(I2C0);
 
     // wait for stop being sent
-    while (I2C_CTL0(I2C1) & I2C_CTL0_STOP)
-        ;
+    while (I2C_CTL0(I2C0) & I2C_CTL0_STOP);
 }
 
 static void scan() {
@@ -167,12 +159,12 @@ int main() {
         scan();
 
         printf("Scanning I2C bus at 400 kHz ...\n");
-        i2c_clock_config(I2C1, 400000, I2C_DTCY_2);
+        i2c_clock_config(I2C0, 400000, I2C_DTCY_2);
         scan();
 
         printf("done\n\n");
 
-        i2c_clock_config(I2C1, 100000, I2C_DTCY_2);
+        i2c_clock_config(I2C0, 100000, I2C_DTCY_2);
         delay_1ms(30 * 1000);
     }
 
@@ -182,8 +174,7 @@ int main() {
 /* retarget the C library printf function to the USART */
 int _put_char(int ch) {
     usart_data_transmit(USART0, (uint8_t)ch);
-    while (RESET == usart_flag_get(USART0, USART_FLAG_TBE))
-        ;
+    while (RESET == usart_flag_get(USART0, USART_FLAG_TBE));
     return ch;
 }
 
